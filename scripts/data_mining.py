@@ -9,9 +9,9 @@ class data():
         self.collect_who_data()
         
     def global_imports(self):
-        global pd, np, requests, tqdm
-        import pandas, numpy, requests, tqdm
-        tqdm, requests, pd, np = tqdm.tqdm, requests, pandas, numpy
+        global pd, np, requests, tqdm, datetime
+        import pandas, numpy, requests, tqdm, datetime
+        tqdm, requests, pd, np, datetime = tqdm.tqdm, requests, pandas, numpy, datetime.datetime
         
     def read_files(self):
         self.submission_data = pd.read_csv(self.datapath + "submission.csv")
@@ -22,7 +22,9 @@ class data():
         self.age = pd.read_excel(self.datapath+"API_SP.POP.65UP.TO.ZS_DS2_en_excel_v2_887753.xls")
         self.population = pd.read_excel(self.datapath+"total_population.xls")
         self.population_dens = pd.read_excel(self.datapath+"population_density.xls")
+        self.oxford=pd.read_excel(self.datapath+"OxCGRT_Download_latest_data.xlsx")
         self.reshape_rawdata()
+        self.reformat_oxford()
         
     def reshape_rawdata(self):
         self.indicator_data["long_form"]=self.indicator_data["long_form"].apply(lambda x: "_".join(x.split(" ")))
@@ -70,9 +72,15 @@ class data():
         result = new_traindata.merge(who_data,on="Shortcut",how="left")
         return result
     
+    def reformat_oxford(self):
+        self.oxford.Date=self.oxford.Date.apply(lambda x: datetime.strftime(datetime.strptime(str(x),"%Y%m%d"),"%Y-%m-%d"))
+        self.oxford["Country_Region"]=self.oxford["CountryName"]
+        self.oxford=self.oxford[["Country_Region","Date","StringencyIndex"]]
+    
     def merge_whole_dataset(self):
         traindata = self.match_country_code(self.countrycodes,self.train_data)
         for who_data in tqdm(self.who_data_list):
             traindata=self.match_dataframes(traindata,who_data)
+        traindata=traindata.merge(self.oxford,on=["Country_Region","Date"],how="left")
         return traindata
             
